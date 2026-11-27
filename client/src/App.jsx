@@ -18,7 +18,7 @@ function App() {
         <button className="md:hidden" onClick={() => setIsSidebarOpen(true)}>
           <span className="icon-[ph--list-bold] text-3xl"></span>
         </button>
-        <h1 className="text-2xl">Chatroom</h1>
+        <h1 className="text-2xl">SaplingChat</h1>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
