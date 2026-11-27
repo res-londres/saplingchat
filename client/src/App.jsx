@@ -5,8 +5,9 @@ import Sidebar from "./components/Sidebar";
 import { useChatSocket } from "./hooks/useChatSocket";
 
 function App() {
+  const wsUrl = import.meta.env.VITE_WS_URL || "ws://localhost:8080";
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { messages, users, thisUser, messageAreaState, hasMore, fetchOlderMessages, sendMessage, changeUsername } = useChatSocket("ws://localhost:8080");
+  const { messages, users, thisUser, messageAreaState, hasMore, fetchOlderMessages, sendMessage, changeUsername } = useChatSocket(wsUrl);
 
   const otherUsers = thisUser
   ? users.filter((u) => u.id !== thisUser.id)
