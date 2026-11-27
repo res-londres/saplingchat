@@ -1,20 +1,25 @@
+import { createServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { createUser, createMessage } from "./helper.js";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { persistSession: false } }
-);
+const PORT = process.env.PORT || 8080;
+const server = createServer((req, res) => {
+  if (req.url === "/health") {
+    res.writeHead(200);
+    res.end("OK");
+    return;
+  }
+  res.writeHead(404);
+  res.end();
+});
 
-const PORT = 8080;
-const wss = new WebSocketServer({ port: PORT });
+const wss = new WebSocketServer({ server });
 
 const clients = new Map(); /* ws -> { id, username } */
 const defaultUsernames = ["pickle", "olive", "pear", "fern", "seaweed", "mint", "lime", "sage", "jade"];
 
-const PAGE_LENGTH = 20; // TODO: test value only, change later
+const PAGE_LENGTH = 50; 
 
 wss.on("connection", (ws) => {
   console.log("New connection");
@@ -166,4 +171,6 @@ function getUserList() {
   });
 }
 
-console.log(`WebSocket server running on ws://localhost:${PORT}`);
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
+});
