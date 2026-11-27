@@ -14,6 +14,8 @@ const wss = new WebSocketServer({ port: PORT });
 const clients = new Map(); /* ws -> { id, username } */
 const defaultUsernames = ["pickle", "olive", "pear", "fern", "seaweed", "mint", "lime", "sage", "jade"];
 
+const PAGE_LENGTH = 20; // TODO: test value only, change later
+
 wss.on("connection", (ws) => {
   console.log("New connection");
 
@@ -25,7 +27,7 @@ wss.on("connection", (ws) => {
       return send(ws, { type: "error", message: "Invalid JSON" });
     }
 
-    /* User joins */
+    /* User join */
     if (data.type === "join") {
       const existingUser = data.user;
       let user;
@@ -88,15 +90,46 @@ wss.on("connection", (ws) => {
       const { data: rows, error } = await supabase
         .from("messages")
         .select("*")
-        .order("created_at", { ascending: false })
-        .limit(20); /* TODO: test value only, change later */
+        .order("id", { ascending: false })
+        .limit(20);
+
       if (error) {
         console.log("Error loading messages:", error);
         send(ws, { type: "message_area_state", state: "error" });
       } else {
-        send(ws, { type: "history", messages: rows.map(createMessage).reverse() });
-        send (ws, { type: "message_area_state", state: "success" });
+        send(ws, {
+          type: "history",
+          messages: rows.map(createMessage).reverse(),
+          hasMore: rows.length === PAGE_LENGTH,
+        });
+        send(ws, { type: "message_area_state", state: "success" });
       }
+    }
+
+    /* Load older messages (pagination) */
+    if (data.type === "load_older_messages") {
+      const before = Number(data.before);
+      if (!Number.isInteger(before)) {
+        return send(ws, { type: "older_messages", messages: [], hasMore: false });
+      }
+
+      const { data: rows, error } = await supabase
+        .from("messages")
+        .select("*")
+        .lt("id", before)
+        .order("id", { ascending: false })
+        .limit(PAGE_LENGTH);
+
+      if (error) {
+        console.log("Error loading older messages:", error);
+        return send(ws, { type: "error", message: "Failed to load older messages" });
+      }
+
+      send(ws, {
+        type: "older_messages",
+        messages: rows.map(createMessage).reverse(),
+        hasMore: rows.length === PAGE_LENGTH,
+      });
     }
   });
 

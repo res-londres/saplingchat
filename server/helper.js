@@ -32,9 +32,9 @@ export function createMessage(row) {
   return {
     id: row.id,
     sender: row.sender,
-    senderId: row.sender_id,
+    sender_id: row.sender_id,
     content: row.content,
-    createdAt: date.toISOString(),
+    created_at: row.created_at,
     timestamp: date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     date: date.toLocaleDateString([], { day: "2-digit", month: "short", year: "2-digit" }),
   };

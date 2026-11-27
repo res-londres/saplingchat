@@ -1,16 +1,17 @@
-import { useRef, useEffect, useMemo } from "react";
+import { useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import Message from "../Message";
 import EmptyView from "./EmptyView";
 import ErrorView from "./ErrorView";
 import LoadingView from "./LoadingView";
 
 const BOTTOM_THRESHOLD = 8;
+const TOP_THRESHOLD = 8;
 const TEN_MINUTES_MS = 10 * 60 * 1000;
 
 function toMilliseconds(message) {
-  if (message.createdAt) {
-    const milliseconds = Date.parse(message.createdAt);
-    if (!Number.isNaN(milliseconds)) return milliseconds;
+  if (message.created_at) {
+    const ms = Date.parse(message.created_at);
+    if (!Number.isNaN(ms)) return ms;
   }
   return null;
 }
@@ -21,7 +22,7 @@ function computeShowMetadata(messages) {
 
   messages.forEach((message, index) => {
     const previous = messages[index - 1];
-    const sameSender = Boolean(previous) && previous.senderId === message.senderId;
+    const sameSender = Boolean(previous) && previous.sender_id === message.sender_id;
 
     const time = toMilliseconds(message);
     const withinTenMinutes =
@@ -38,9 +39,12 @@ function computeShowMetadata(messages) {
   return flags;
 }
 
-function MessageArea({ messages, messageAreaState }) {
+function MessageArea({ messages, messageAreaState, hasMore, fetchOlderMessages }) {
   const containerRef = useRef(null);
   const isAtBottomRef = useRef(true);
+  const isFetchingMessagesRef = useRef(false);
+  const prevScrollHeightRef = useRef(0);
+  const prevLengthRef = useRef(messages.length);
 
   const showMetadataFlags = useMemo(
     () => computeShowMetadata(messages),
@@ -52,13 +56,34 @@ function MessageArea({ messages, messageAreaState }) {
     if (!container) return;
     isAtBottomRef.current =
       container.scrollHeight - container.scrollTop - container.clientHeight <= BOTTOM_THRESHOLD;
+
+    const isAtTop = container.scrollTop <= TOP_THRESHOLD;
+    if (isAtTop && !isFetchingMessagesRef.current && hasMore) {
+      isFetchingMessagesRef.current = true;
+      prevScrollHeightRef.current = container.scrollHeight;
+      fetchOlderMessages();
+    }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    if (!isAtBottomRef.current) return;
-    container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+
+    const prevLen = prevLengthRef.current;
+    const newLen = messages.length;
+    prevLengthRef.current = newLen;
+
+    if (newLen > prevLen && prevScrollHeightRef.current > 0) {
+      const diff = container.scrollHeight - prevScrollHeightRef.current;
+      container.scrollTop = container.scrollTop + diff;
+      prevScrollHeightRef.current = 0;
+      isFetchingMessagesRef.current = false;
+      return;
+    }
+
+    if (isAtBottomRef.current) {
+      container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+    }
   }, [messages, messageAreaState]);
 
   if (messageAreaState === "loading") return <LoadingView />;
@@ -75,7 +100,7 @@ function MessageArea({ messages, messageAreaState }) {
         <Message
           key={message.id}
           sender={message.sender}
-          senderId={message.senderId}
+          senderId={message.sender_id}
           timestamp={message.timestamp}
           date={message.date}
           content={message.content}

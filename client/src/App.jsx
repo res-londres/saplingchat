@@ -6,7 +6,7 @@ import { useChatSocket } from "./hooks/useChatSocket";
 
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { messages, users, thisUser, messageAreaState, sendMessage, changeUsername } = useChatSocket("ws://localhost:8080");
+  const { messages, users, thisUser, messageAreaState, hasMore, fetchOlderMessages, sendMessage, changeUsername } = useChatSocket("ws://localhost:8080");
 
   const otherUsers = thisUser
   ? users.filter((u) => u.id !== thisUser.id)
@@ -30,7 +30,7 @@ function App() {
           changeUsername={changeUsername}
         />
         <main className="flex flex-1 flex-col">
-          <MessageArea messages={messages} thisUser={thisUser} messageAreaState={messageAreaState} />
+          <MessageArea messages={messages} thisUser={thisUser} messageAreaState={messageAreaState} hasMore={hasMore} fetchOlderMessages={fetchOlderMessages}/>
           <Composer onSend={sendMessage} />
         </main>
       </div>

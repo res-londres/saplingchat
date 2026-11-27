@@ -6,6 +6,8 @@ export function useChatSocket(url) {
   const [messageAreaState, setMessageAreaState] = useState("loading");
   const [users, setUsers] = useState([]);
   const [thisUser, setThisUser] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
+  const isFetchingOlderRef = useRef(false);
 
   useEffect(() => {
     const ws = new WebSocket(url);
@@ -22,6 +24,12 @@ export function useChatSocket(url) {
 
       if (data.type === "history") {
         setMessages(data.messages);
+        setHasMore(data.hasMore ?? true);
+      }
+      if (data.type === "older_messages") {
+        setMessages((prev) => [...data.messages, ...prev]);
+        setHasMore(data.hasMore ?? false);
+        isFetchingOlderRef.current = false;
       }
       if (data.type === "message") {
         setMessages((prev) => [...prev, data.message]);
@@ -39,10 +47,26 @@ export function useChatSocket(url) {
       if (data.type === "message_area_state") {
         setMessageAreaState(data.state);
       }
+      if (data.type === "error") {
+        // Safety: unblock fetching if an older_messages request errored
+        isFetchingOlderRef.current = false;
+      }
     };
 
     return () => ws.close();
   }, [url]);
+
+  const fetchOlderMessages = useCallback(() => {
+    const ws = wsRef.current;
+    if (ws?.readyState !== WebSocket.OPEN) return;
+    if (isFetchingOlderRef.current || !hasMore || messages.length === 0) return;
+
+    isFetchingOlderRef.current = true;
+    send(ws, {
+      type: "load_older_messages",
+      before: messages[0].id,
+    });
+  }, [messages, hasMore]);
 
   const sendMessage = useCallback((text) => {
     const ws = wsRef.current;
@@ -58,7 +82,16 @@ export function useChatSocket(url) {
     }
   }, []);
 
-  return { messages, users, thisUser, messageAreaState, sendMessage, changeUsername };
+  return {
+    messages,
+    users,
+    thisUser,
+    messageAreaState,
+    hasMore,
+    fetchOlderMessages,
+    sendMessage,
+    changeUsername,
+  };
 }
 
 function send(ws, payload) {

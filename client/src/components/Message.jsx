@@ -12,7 +12,7 @@ function Message({ sender, senderId, timestamp, date, content, showMetadata }) {
           </span>
         </div>
       )}
-      <div className="w-fit rounded-lg bg-[#BEF8DF] p-3 text-justify md:max-w-[85%]">
+      <div className="w-fit rounded-lg bg-[#BEF8DF] p-3 text-justify max-w-[80%]">
         <span>{content}</span>
       </div>
     </div>
